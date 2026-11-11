@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (lint, tipos, tests, migraciones)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: strategyko
+          POSTGRES_PASSWORD: strategyko
+          POSTGRES_DB: strategyko_rates_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U strategyko -d strategyko_rates_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://strategyko:strategyko@localhost:5432/strategyko_rates_test
+      TEST_DATABASE_URL: postgresql://strategyko:strategyko@localhost:5432/strategyko_rates_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Aplicar migraciones (mismo comando que el despliegue)
+        run: npm run db:deploy
+      - run: npm run lint
+      - name: Tipos
+        run: npx tsc --noEmit
+      - name: Tests unitarios
+        run: npm test
+      - name: Tests de integración
+        run: npm run test:e2e
+      - run: npm run build
+
+  frontend:
+    name: Frontend (lint, tipos, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
