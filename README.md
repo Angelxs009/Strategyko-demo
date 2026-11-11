@@ -10,7 +10,7 @@ Una pieza de *Synapse* para Strategyko · Cargo Allianz
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-145%20passing-2A7F8E)
+![Tests](https://img.shields.io/badge/tests-164%20passing-2A7F8E)
 ![Modo](https://img.shields.io/badge/datos-modo%20demo-D99E2B)
 
 </div>
@@ -194,7 +194,7 @@ El seguimiento **no** se incluye porque depende de una referencia (contenedor o 
 
 ### Probar con Swagger o Postman
 
-- **Swagger:** abre `http://localhost:4000/api/docs`, elige un endpoint, *Try it out* y *Execute*.
+- **Swagger:** abre `http://localhost:4000/api/docs`, elige un endpoint, *Try it out* y *Execute*. Los parámetros y el cuerpo del `POST /api/push` traen ejemplos válidos, así que se puede ejecutar sin editar nada. Si activas `SERVICE_API_KEY`, usa *Authorize* una sola vez.
 - **Postman:** importa [`postman/strategyko-rates.postman_collection.json`](postman/strategyko-rates.postman_collection.json). Trae 10 peticiones con 21 aserciones y las variables `baseUrl` y `apiKey`. También corre por consola: `npx newman run postman/strategyko-rates.postman_collection.json`.
 
 ## 🧪 Modo demo y modo live
@@ -250,10 +250,17 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Suite | Pruebas |
 |---|---|
 | Backend, unitarias | 107 |
-| Backend, integración (supertest + PostgreSQL) | 16 |
+| Backend, integración (supertest + PostgreSQL) | 35 |
 | Frontend (Vitest + Testing Library) | 22 |
 
 Verificado en local con lint, tipos y build sin errores. El workflow de [GitHub Actions](.github/workflows/ci.yml) ejecuta los mismos comandos (incluye `prisma migrate deploy`); su sintaxis es válida, pero **aún no se ha ejecutado**.
+
+**Contrato de la API.** `backend/test/openapi-contract.e2e-spec.ts` comprueba que Swagger diga la verdad:
+
+- Los 7 endpoints están documentados con resumen, descripción, tag y esquema de respuesta; las rutas `/api` documentan 400, 401 y 429 (y 502 donde aplica).
+- Cada ejemplo de error coincide con su código HTTP y cumple su propio esquema.
+- **Las respuestas reales se validan contra el esquema publicado**: un campo que la API devuelva y no esté documentado, o uno obligatorio que falte, hace fallar el test (incluye un 429 real al superar el límite).
+- Los modelos de respuesta (`src/api-models`) implementan los tipos reales, así que TypeScript avisa si el código y la documentación se desalinean.
 
 <details>
 <summary>Base de datos de pruebas local</summary>

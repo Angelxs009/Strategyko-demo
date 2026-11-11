@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CarriersService } from '../carriers/carriers.service.js';
 import { withRetry, withTimeout } from '../common/resilience.js';
-import type { Carrier, RateQuery, RateQuote } from '../common/types.js';
+import type { HistoryResponseDto } from '../api-models/rates.models.js';
+import type { Carrier, ContainerType, DataSource, RateQuery, RateQuote } from '../common/types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { HistoryQueryDto } from './dto/rate-query.dto.js';
 
@@ -90,7 +91,7 @@ export class RatesService {
   }
 
   /** Historial paginado. SIEMPRE filtra por tenantId. */
-  async history(filters: HistoryQueryDto) {
+  async history(filters: HistoryQueryDto): Promise<HistoryResponseDto> {
     const where = {
       tenantId: this.tenantId,
       ...(filters.origin && { origin: filters.origin }),
@@ -114,16 +115,17 @@ export class RatesService {
       total,
       items: rows.map((r) => ({
         id: r.id,
-        carrier: r.carrier,
+        // Estos campos solo los escribe este servicio, ya validados: el cast es seguro.
+        carrier: r.carrier as Carrier,
         origin: r.origin,
         destination: r.destination,
-        container: r.container,
+        container: r.container as ContainerType,
         baseFreightUsd: Number(r.baseFreightUsd),
         totalUsd: Number(r.totalUsd),
         transitDays: r.transitDays,
         validFrom: r.validFrom.toISOString().slice(0, 10),
         validTo: r.validTo.toISOString().slice(0, 10),
-        source: r.source,
+        source: r.source as DataSource,
         fetchedAt: r.fetchedAt.toISOString(),
         surcharges: r.surcharges.map((s) => ({ code: s.code, name: s.name, amountUsd: Number(s.amountUsd) })),
       })),
