@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 import { CONTAINERS, type ContainerType } from '../../common/types.js';
@@ -7,7 +7,7 @@ const upper = ({ value }: { value: unknown }) => (typeof value === 'string' ? va
 const LOCODE = /^[A-Z]{2}[A-Z0-9]{3}$/;
 
 export class RateQueryDto {
-  @ApiPropertyOptional({ example: 'CNSHA', description: 'Puerto de origen (UN/LOCODE, debe ser de China)' })
+  @ApiProperty({ example: 'CNSHA', description: 'Puerto de origen (UN/LOCODE, debe ser de China)' })
   @Transform(upper)
   @Matches(LOCODE, { message: 'origin debe ser un código UN/LOCODE válido (ej. CNSHA).' })
   @Matches(/^CN/, { message: 'origin debe ser un puerto de China (empieza con CN).' })
