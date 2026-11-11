@@ -1,0 +1,282 @@
+{
+  "info": {
+    "name": "Strategyko Rates",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Pruebas del backend de tarifas. Requiere el backend corriendo (npm run start:dev)."
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 y status ok', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tarifas de las 3 navieras",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/rates?origin=CNSHA&destination=ECGYE&container=40HC",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "rates"
+          ],
+          "query": [
+            {
+              "key": "origin",
+              "value": "CNSHA"
+            },
+            {
+              "key": "destination",
+              "value": "ECGYE"
+            },
+            {
+              "key": "container",
+              "value": "40HC"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const b = pm.response.json();",
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('3 tarifas y total = base + recargos', () => { pm.expect(b.quotes.length).to.eql(3); b.quotes.forEach(x => { const s = x.surcharges.reduce((a, c) => a + c.amountUsd, x.baseFreightUsd); pm.expect(x.totalUsd).to.be.closeTo(s, 0.01); }); });",
+              "pm.test('todo dato trae source', () => b.quotes.forEach(x => pm.expect(['demo','live']).to.include(x.source)));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comparativo",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/compare?origin=CNSHA&destination=ECGYE&container=40HC",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "compare"
+          ],
+          "query": [
+            {
+              "key": "origin",
+              "value": "CNSHA"
+            },
+            {
+              "key": "destination",
+              "value": "ECGYE"
+            },
+            {
+              "key": "container",
+              "value": "40HC"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const c = pm.response.json().comparison;",
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('ranking ordenado por total', () => { const t = c.ranking.map(r => r.totalUsd); pm.expect(t).to.eql([...t].sort((a, b) => a - b)); });",
+              "pm.test('en modo demo hay aviso', () => { if (c.mode !== 'live') pm.expect(c.warning).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Historial",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/rates/history?page=1&pageSize=10",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "rates",
+            "history"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 con paginacion', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.have.all.keys('page','pageSize','total','items'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enviar a Strategyko (dry-run sin STRATEGYKO_URL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/push",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "push"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": \"CNSHA\",\n  \"destination\": \"ECGYE\",\n  \"container\": \"40HC\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('202', () => pm.response.to.have.status(202));",
+              "pm.test('payload versionado', () => pm.expect(pm.response.json().payload.schemaVersion).to.eql('1.0'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error 400: origen fuera de China",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/compare?origin=USLAX",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "compare"
+          ],
+          "query": [
+            {
+              "key": "origin",
+              "value": "USLAX"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 con mensaje en español', () => { pm.response.to.have.status(400); pm.expect(JSON.stringify(pm.response.json().message)).to.include('China'); });"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "apiKey",
+      "value": ""
+    }
+  ]
+}

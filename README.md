@@ -130,6 +130,10 @@ curl -X POST http://localhost:4000/api/push \
 curl -H "x-api-key: <clave>" "http://localhost:4000/api/compare?origin=CNSHA"
 ```
 
+### Probar con Postman
+
+Importa [postman/strategyko-rates.postman_collection.json](postman/strategyko-rates.postman_collection.json) (Postman → *Import*). Trae 6 peticiones con pruebas (11 aserciones) y las variables `baseUrl` (`http://localhost:4000`) y `apiKey` (vacía; actívala en el header `x-api-key` solo si defines `SERVICE_API_KEY`). También se puede correr por consola: `npx newman run postman/strategyko-rates.postman_collection.json`.
+
 ### Formato común `RateQuote`
 
 ```json
