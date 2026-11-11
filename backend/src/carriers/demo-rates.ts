@@ -43,7 +43,7 @@ export function isoWeek(date: Date): { key: string; monday: Date } {
   return { key: `${thursday.getUTCFullYear()}-W${String(week).padStart(2, '0')}`, monday };
 }
 
-function hashString(s: string): number {
+export function hashString(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -53,7 +53,7 @@ function hashString(s: string): number {
 }
 
 /** PRNG determinista (mulberry32). */
-function seededRandom(seed: number): () => number {
+export function seededRandom(seed: number): () => number {
   let a = seed;
   return () => {
     a |= 0;
@@ -64,7 +64,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+export const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 /**
  * Genera una tarifa simulada, determinista dentro de la misma semana ISO.

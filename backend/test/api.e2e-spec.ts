@@ -110,9 +110,45 @@ describe('API (integración)', () => {
   it('POST /api/push hace dry-run con 202 sin STRATEGYKO_URL', async () => {
     const res = await request(app.getHttpServer()).post('/api/push').send({ origin: 'CNSHA' }).expect(202);
     expect(res.body).toMatchObject({ delivered: false, dryRun: true });
-    expect(res.body.payload.schemaVersion).toBe('1.0');
+    expect(res.body.payload.schemaVersion).toBe('1.1');
+    expect(res.body.payload.schedules.length).toBe(12); // 3 navieras x 4 semanas
     expect(res.body.payload.dataMode).toBe('demo');
     expect(res.body.payload.quotes).toHaveLength(3);
+  });
+
+  it('GET /api/schedules devuelve las próximas salidas ordenadas y marcadas demo', async () => {
+    const res = await request(app.getHttpServer()).get('/api/schedules?origin=CNSHA&weeks=2').expect(200);
+    expect(res.body.n).toBe(6);
+    expect(res.body.mode).toBe('demo');
+    expect(res.body.warning).toContain('simulados');
+    const etds = res.body.departures.map((d: { etd: string }) => d.etd);
+    expect(etds).toEqual([...etds].sort());
+    for (const d of res.body.departures) {
+      expect(d.source).toBe('demo');
+      expect(d.vessel).toMatch(/^DEMO /);
+    }
+  });
+
+  it('GET /api/schedules valida los parámetros', async () => {
+    await request(app.getHttpServer()).get('/api/schedules').expect(400);
+    await request(app.getHttpServer()).get('/api/schedules?origin=CNSHA&weeks=20').expect(400);
+    await request(app.getHttpServer()).get('/api/schedules?origin=USLAX').expect(400);
+  });
+
+  it('GET /api/tracking/:reference devuelve la línea de tiempo demo', async () => {
+    const res = await request(app.getHttpServer()).get('/api/tracking/CSQU3054383?carrier=MAERSK').expect(200);
+    expect(res.body.mode).toBe('demo');
+    expect(res.body.warning).toContain('simulados');
+    expect(res.body.tracking).toMatchObject({ reference: 'CSQU3054383', referenceType: 'container', carrier: 'MAERSK', source: 'demo' });
+    expect(res.body.tracking.events).toHaveLength(6);
+  });
+
+  it('GET /api/tracking valida la referencia y la naviera', async () => {
+    const badDigit = await request(app.getHttpServer()).get('/api/tracking/CSQU3054384?carrier=MAERSK').expect(400);
+    expect(JSON.stringify(badDigit.body.message)).toContain('dígito verificador inválido');
+    await request(app.getHttpServer()).get('/api/tracking/CSQU3054383').expect(400);
+    await request(app.getHttpServer()).get('/api/tracking/CSQU3054383?carrier=ACME').expect(400);
+    await request(app.getHttpServer()).get('/api/tracking/%21%21?carrier=MAERSK').expect(400);
   });
 
   it('POST /api/push valida el cuerpo', async () => {
@@ -160,5 +196,14 @@ describe('Modo live sin credenciales', () => {
     expect(rates.body.errors[0].message).toContain('no está configurado');
     const cmp = await request(app.getHttpServer()).get('/api/compare?origin=CNSHA').expect(502);
     expect(cmp.body.errors).toHaveLength(3);
+  });
+
+  it('salidas y seguimiento tampoco caen a demo en modo live', async () => {
+    const sch = await request(app.getHttpServer()).get('/api/schedules?origin=CNSHA').expect(200);
+    expect(sch.body.departures).toEqual([]);
+    expect(sch.body.errors).toHaveLength(3);
+    expect(sch.body.errors[0].message).toContain('no está verificado');
+    const trk = await request(app.getHttpServer()).get('/api/tracking/CSQU3054383?carrier=MAERSK').expect(502);
+    expect(JSON.stringify(trk.body.message)).toContain('no está verificado');
   });
 });

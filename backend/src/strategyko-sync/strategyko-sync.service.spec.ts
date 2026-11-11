@@ -3,6 +3,8 @@ import { BadGatewayException } from '@nestjs/common';
 import { compareQuotes } from '../compare/compare.js';
 import type { CompareService } from '../compare/compare.service.js';
 import { DemoCarrierAdapter } from '../carriers/demo.adapter.js';
+import type { SchedulesService } from '../schedules/schedules.service.js';
+import { buildDemoDepartures } from '../carriers/demo-extras.js';
 import type { RateQuery } from '../common/types.js';
 import { SCHEMA_VERSION, StrategykoSyncService } from './strategyko-sync.service.js';
 
@@ -13,8 +15,10 @@ async function build(env: Record<string, string>) {
   const compare = {
     compare: async () => ({ query, quotes, errors: [], comparison: compareQuotes(quotes) }),
   } as unknown as CompareService;
+  const departures = (['MAERSK', 'CMA_CGM', 'HAPAG_LLOYD'] as const).flatMap((c) => buildDemoDepartures(c, { ...query, weeks: 2 }, new Date('2026-11-11T10:00:00Z')));
+  const schedules = { fetch: async () => ({ departures, errors: [] }) } as unknown as SchedulesService;
   const config = { get: (k: string) => env[k] } as unknown as ConfigService;
-  return new StrategykoSyncService(compare, config);
+  return new StrategykoSyncService(compare, schedules, config);
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -32,6 +36,7 @@ describe('StrategykoSyncService.push', () => {
     expect(r.payload.dataMode).toBe('demo');
     expect(r.payload.quotes).toHaveLength(3);
     expect(r.payload.comparison.n).toBe(3);
+    expect(r.payload.schedules).toHaveLength(6);
   });
 
   it('con STRATEGYKO_URL envía el payload versionado con Bearer', async () => {
@@ -43,7 +48,7 @@ describe('StrategykoSyncService.push', () => {
     expect(url).toBe('https://strategyko.test/rates');
     expect(init.method).toBe('POST');
     expect(init.headers.authorization).toBe('Bearer k123');
-    expect(JSON.parse(init.body).schemaVersion).toBe('1.0');
+    expect(JSON.parse(init.body).schemaVersion).toBe('1.1');
   });
 
   it('responde 502 si Strategyko devuelve error', async () => {

@@ -53,3 +53,57 @@ export function resolveMode(sources: DataSource[]): DataMode {
   if (hasDemo && hasLive) return 'mixed';
   return hasLive ? 'live' : 'demo';
 }
+
+// ---- Próximas salidas ----
+
+export interface ScheduleQuery {
+  origin: string;
+  destination: string;
+  weeks: number; // semanas hacia adelante (1 a 8)
+}
+
+export interface Departure {
+  carrier: Carrier;
+  origin: string;
+  destination: string;
+  vessel: string;
+  voyage: string;
+  service: string;
+  etd: string; // salida estimada, YYYY-MM-DD
+  eta: string; // llegada estimada, YYYY-MM-DD
+  transitDays: number;
+  source: DataSource;
+}
+
+// ---- Seguimiento ----
+
+export type TrackingStatus = 'PENDING' | 'IN_TRANSIT' | 'ARRIVED';
+export type ReferenceType = 'container' | 'bl';
+
+export interface TrackingEvent {
+  code: string; // GATE_IN, LOADED, DEPARTED, ARRIVED, DISCHARGED, GATE_OUT
+  description: string;
+  location: string; // UN/LOCODE
+  locationName: string;
+  date: string; // YYYY-MM-DD
+  completed: boolean; // true = ya ocurrió; false = previsto
+}
+
+export interface TrackingResult {
+  carrier: Carrier;
+  reference: string;
+  referenceType: ReferenceType;
+  status: TrackingStatus;
+  vessel: string;
+  voyage: string;
+  origin: string;
+  destination: string;
+  eta: string;
+  events: TrackingEvent[];
+  source: DataSource;
+}
+
+export interface CarrierError {
+  carrier: Carrier;
+  message: string;
+}
