@@ -1,0 +1,57 @@
+// Esquema de tarifas. Todas las tablas principales llevan tenantId.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model RateQuery {
+  id          String   @id @default(uuid())
+  tenantId    String   @default("dev-tenant")
+  origin      String
+  destination String
+  container   String
+  createdAt   DateTime @default(now())
+  quotes      RateQuoteRecord[]
+
+  @@index([tenantId, createdAt])
+}
+
+model RateQuoteRecord {
+  id             String   @id @default(uuid())
+  tenantId       String   @default("dev-tenant")
+  queryId        String
+  query          RateQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  carrier        String
+  origin         String
+  destination    String
+  container      String
+  baseFreightUsd Decimal  @db.Decimal(12, 2)
+  totalUsd       Decimal  @db.Decimal(12, 2)
+  transitDays    Int
+  validFrom      DateTime @db.Date
+  validTo        DateTime @db.Date
+  source         String
+  fetchedAt      DateTime @default(now())
+  surcharges     SurchargeRecord[]
+
+  @@index([tenantId, origin, destination, container, fetchedAt])
+  @@index([tenantId, carrier])
+}
+
+model SurchargeRecord {
+  id        String   @id @default(uuid())
+  tenantId  String   @default("dev-tenant")
+  quoteId   String
+  quote     RateQuoteRecord @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  code      String
+  name      String
+  amountUsd Decimal  @db.Decimal(12, 2)
+
+  @@index([quoteId])
+}
