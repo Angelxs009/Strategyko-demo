@@ -54,7 +54,7 @@ describe('Seguimiento demo', () => {
     expect(t.vessel.startsWith('DEMO ')).toBe(true);
     expect(t.events.map((e) => e.code)).toEqual(['GATE_IN', 'LOADED', 'DEPARTED', 'ARRIVED', 'DISCHARGED', 'GATE_OUT']);
     const dates = t.events.map((e) => e.date);
-    expect(dates).toEqual([...dates].sort());
+    expect(dates).toEqual([...dates].sort((a, b) => a.localeCompare(b)));
     expect(t.destination).toBe('ECGYE');
     expect(t.eta).toBe(t.events.find((e) => e.code === 'ARRIVED')!.date);
   });

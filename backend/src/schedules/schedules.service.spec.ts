@@ -37,7 +37,7 @@ describe('SchedulesService', () => {
     const etds = r.departures.map((d) => d.etd);
     expect(etds).toEqual([...etds].sort());
     expect(r.mode).toBe('demo');
-    expect(r.warning).toContain('simulados');
+    expect(r.warning).toContain('Salidas simuladas (modo demo)');
   });
 
   it('si una naviera falla, las demás siguen y el error se informa', async () => {
@@ -84,7 +84,7 @@ describe('TrackingService', () => {
     expect(r.tracking.reference).toBe('CSQU3054383');
     expect(r.tracking.referenceType).toBe('container');
     expect(r.mode).toBe('demo');
-    expect(r.warning).toContain('simulados');
+    expect(r.warning).toContain('Seguimiento y eventos simulados (modo demo)');
   });
 
   it('rechaza una referencia inválida con 400 y no consulta a la naviera', async () => {

@@ -2,7 +2,7 @@
 
 # 🚢 strategyko-rates
 
-**Tarifas de navieras desde China, normalizadas y comparadas.**
+**Tarifas, próximas salidas y seguimiento de navieras desde China.**
 Una pieza de *Synapse* para Strategyko · Cargo Allianz
 
 ![NestJS](https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white)
@@ -10,7 +10,7 @@ Una pieza de *Synapse* para Strategyko · Cargo Allianz
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-92%20passing-2A7F8E)
+![Tests](https://img.shields.io/badge/tests-145%20passing-2A7F8E)
 ![Modo](https://img.shields.io/badge/datos-modo%20demo-D99E2B)
 
 </div>
@@ -18,7 +18,7 @@ Una pieza de *Synapse* para Strategyko · Cargo Allianz
 ---
 
 > [!IMPORTANT]
-> **Estado honesto:** hoy todo corre en **modo demo**. Las tarifas son **simuladas**, y están marcadas como tales en la API y en la pantalla. Los adaptadores *live* están construidos y probados, pero **ninguna naviera tiene un contrato de API verificado todavía**. Detalles en [Pendientes](#-pendientes-honestos).
+> **Estado honesto:** hoy todo corre en **modo demo**. Las tarifas, las salidas y el seguimiento son **simulados**, y están marcados como tales en la API y en la pantalla. Los adaptadores *live* están construidos y probados, pero **ninguna naviera tiene un contrato de API verificado todavía**. Detalles en [Pendientes](#-pendientes-honestos).
 
 ## ✨ Qué hace
 
@@ -29,13 +29,23 @@ Una pieza de *Synapse* para Strategyko · Cargo Allianz
 | 💾 **Guarda** | Cada consulta queda en PostgreSQL con su vigencia y su `tenantId`, con historial paginado. |
 | ⚖️ **Compara** | Ranking, diferencia frente a la más barata, balance costo/tránsito (70/30), dispersión, desglose por componente e insights en español. |
 | 📤 **Envía** | Paquete versionado hacia Strategyko, con **dry-run** si no hay URL configurada. |
-| 🖥️ **Muestra** | Interfaz web "Comparativo de tarifas", responsive, accesible y con modo oscuro. |
+| 🗓️ **Próximas salidas** | Las siguientes salidas de cada naviera para la ruta (buque, viaje, servicio, ETD, ETA y tránsito), de 1 a 8 semanas hacia adelante. |
+| 📍 **Seguimiento** | Línea de tiempo de eventos de un contenedor (ISO 6346, con dígito verificador) o de un BL, con estado y llegada estimada. |
+| 🖥️ **Muestra** | Interfaz web con tres secciones (Tarifas, Próximas salidas, Seguimiento), responsive, accesible y con modo oscuro. |
 
 <div align="center">
 
 ![Comparativo de tarifas](docs/captura-comparativo.png)
 
-<sub>Vista "Comparativo de tarifas" con datos <b>simulados</b> (modo demo).</sub>
+<sub><b>Tarifas:</b> comparativo con datos simulados (modo demo).</sub>
+
+![Próximas salidas](docs/captura-salidas.png)
+
+<sub><b>Próximas salidas:</b> calendario por naviera, con buques ficticios con prefijo <code>DEMO</code>.</sub>
+
+![Seguimiento de carga](docs/captura-seguimiento.png)
+
+<sub><b>Seguimiento:</b> línea de tiempo simulada de un contenedor.</sub>
 
 </div>
 
@@ -45,12 +55,18 @@ Una pieza de *Synapse* para Strategyko · Cargo Allianz
 flowchart LR
     UI["Frontend<br/>Next.js"] -->|REST| API["Backend<br/>NestJS"]
     API --> RATES["rates"]
+    API --> CMP["compare"]
+    API --> SCH["schedules"]
+    API --> TRK["tracking"]
+    API --> SYNC["strategyko-sync"]
     RATES -->|en paralelo| M["Maersk"]
     RATES -->|en paralelo| C["CMA CGM"]
     RATES -->|en paralelo| H["Hapag-Lloyd"]
+    SCH -->|en paralelo| M
+    SCH -->|en paralelo| C
+    SCH -->|en paralelo| H
+    TRK -->|una naviera| M
     RATES --> DB[("PostgreSQL<br/>Prisma")]
-    API --> CMP["compare"]
-    API --> SYNC["strategyko-sync"]
     SYNC -->|"POST versionado"| SK["Strategyko"]
 ```
 
@@ -58,10 +74,12 @@ flowchart LR
 
 | Módulo (`backend/src`) | Responsabilidad |
 |---|---|
-| `carriers` | Interfaz `CarrierAdapter`; adaptadores demo y live (`carriers/live`) |
+| `carriers` | Adaptadores por naviera para tarifas, salidas y seguimiento; demo y live (`carriers/live`) |
 | `rates` | Consulta en paralelo, timeout, reintentos, persistencia e historial |
 | `compare` | Análisis comparativo como función pura (`compare.ts`) |
-| `strategyko-sync` | Envío del paquete a Strategyko |
+| `schedules` | Próximas salidas de todas las navieras en paralelo |
+| `tracking` | Seguimiento por contenedor o BL en la naviera elegida |
+| `strategyko-sync` | Envío del paquete (tarifas, comparación y salidas) a Strategyko |
 | `health` | Estado del servicio y modo actual |
 | `prisma`, `common` | Acceso a datos, guard de API key, utilidades de resiliencia |
 
@@ -102,12 +120,24 @@ Documentación interactiva en **`/api/docs`** (Swagger).
 | `GET` | `/api/rates` | Consulta las navieras, guarda y devuelve `quotes[]` y `errors[]` |
 | `GET` | `/api/rates/history` | Historial paginado con filtros |
 | `GET` | `/api/compare` | Tarifas + análisis comparativo |
+| `GET` | `/api/schedules` | Próximas salidas de las navieras para una ruta |
+| `GET` | `/api/tracking/:reference` | Seguimiento de un contenedor o BL (requiere `carrier`) |
 | `POST` | `/api/push` | Envío a Strategyko (dry-run sin `STRATEGYKO_URL`, responde `202`) |
 
-**Parámetros:** `origin` (UN/LOCODE de China, obligatorio), `destination` (por defecto `ECGYE`) y `container` (`20GP`, `40GP`, `40HC`; por defecto `40HC`). Los errores de validación llegan como `400` en español.
+**Parámetros de tarifas y salidas:** `origin` (UN/LOCODE de China, obligatorio) y `destination` (por defecto `ECGYE`). Tarifas además usa `container` (`20GP`, `40GP`, `40HC`; por defecto `40HC`) y salidas usa `weeks` (1 a 8; por defecto 4).
+
+**Seguimiento:** `:reference` es un número de contenedor (4 letras y 7 dígitos; se valida el dígito verificador ISO 6346, ej. `CSQU3054383`) o un BL de 6 a 20 caracteres alfanuméricos, y `carrier` es obligatorio (`MAERSK`, `CMA_CGM` o `HAPAG_LLOYD`).
+
+Los errores de validación llegan como `400` en español.
 
 ```bash
 curl "http://localhost:4000/api/compare?origin=CNSHA&destination=ECGYE&container=40HC"
+
+# Próximas 4 semanas de salidas
+curl "http://localhost:4000/api/schedules?origin=CNSHA&destination=ECGYE&weeks=4"
+
+# Seguimiento de un contenedor
+curl "http://localhost:4000/api/tracking/CSQU3054383?carrier=MAERSK"
 
 curl -X POST http://localhost:4000/api/push \
   -H "content-type: application/json" \
@@ -143,32 +173,33 @@ curl -X POST http://localhost:4000/api/push \
 <details>
 <summary><b>Contrato de envío a Strategyko</b> (propuesta, pendiente de alinear)</summary>
 
-`POST` a `STRATEGYKO_URL` con `Authorization: Bearer ${STRATEGYKO_API_KEY}`:
+`POST` a `STRATEGYKO_URL` con `Authorization: Bearer ${STRATEGYKO_API_KEY}`. La versión **1.1** agrega `schedules` (opcional) y es compatible con los consumidores de 1.0:
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "generatedAt": "2026-11-11T17:00:00.000Z",
   "origin": "strategyko-rates",
   "query": { "origin": "CNSHA", "destination": "ECGYE", "container": "40HC" },
   "dataMode": "demo | live | mixed",
   "quotes": [],
-  "comparison": {}
+  "comparison": {},
+  "schedules": []
 }
 ```
 
-Este formato es una **propuesta propia**, definida a partir del requerimiento; no proviene del backend real de Strategyko. Los cambios futuros deben ser compatibles hacia atrás mediante `schemaVersion`.
+El seguimiento **no** se incluye porque depende de una referencia (contenedor o BL), no de la ruta. Este formato es una **propuesta propia**, definida a partir del requerimiento; no proviene del backend real de Strategyko. Los cambios futuros deben ser compatibles hacia atrás mediante `schemaVersion`.
 
 </details>
 
 ### Probar con Swagger o Postman
 
 - **Swagger:** abre `http://localhost:4000/api/docs`, elige un endpoint, *Try it out* y *Execute*.
-- **Postman:** importa [`postman/strategyko-rates.postman_collection.json`](postman/strategyko-rates.postman_collection.json). Trae 6 peticiones con 11 aserciones y las variables `baseUrl` y `apiKey`. También corre por consola: `npx newman run postman/strategyko-rates.postman_collection.json`.
+- **Postman:** importa [`postman/strategyko-rates.postman_collection.json`](postman/strategyko-rates.postman_collection.json). Trae 10 peticiones con 21 aserciones y las variables `baseUrl` y `apiKey`. También corre por consola: `npx newman run postman/strategyko-rates.postman_collection.json`.
 
 ## 🧪 Modo demo y modo live
 
-**Demo (por defecto).** Tarifas simuladas, deterministas por semana ISO: el mismo resultado dentro de la semana y una variación pequeña entre semanas, con perfiles distintos por naviera. La API devuelve `mode: "demo"` con un aviso, y la interfaz muestra el banner **Modo demo** y una insignia en cada fila.
+**Demo (por defecto).** Tarifas simuladas, deterministas por semana ISO: el mismo resultado dentro de la semana y una variación pequeña entre semanas, con perfiles distintos por naviera. Las salidas son semanales (un día de zarpe fijo por naviera) y el seguimiento genera una línea de tiempo determinista por referencia. Los buques llevan el prefijo `DEMO` y los servicios `DEMO-` a propósito, para que nunca se confundan con barcos o viajes reales. La API devuelve `mode: "demo"` con un aviso, y la interfaz muestra el banner **Modo demo** y una insignia en cada fila.
 
 **Live (`RATES_MODE=live`).** Requiere una cuenta en el portal de cada naviera. **Hoy no está operativo:** sin variables de entorno, cada naviera informa cuáles faltan; con ellas, informa que el contrato no está verificado. Nunca cae a demo ni inventa datos.
 
@@ -178,7 +209,7 @@ Para activarlo cuando haya acceso:
 2. En `backend/src/carriers/live/<naviera>.adapter.ts`, completar `buildRequest()` y `parseResponse()` (y `apiKeyHeader()` si aplica). Cada archivo documenta qué se encontró y qué falta confirmar (`TODO(angel)`).
 3. Cargar las variables de entorno y establecer `RATES_MODE=live`.
 
-Ya resuelto y probado: cliente HTTP con clasificación de errores, OAuth2 `client_credentials` con caché de token y validación del mapeo a `RateQuote` (solo USD, montos y fechas válidos, total coherente).
+Las salidas y el seguimiento en modo live aún no tienen adaptador: fallan con "contrato no verificado" (ver `carriers/live/live-extras.adapter.ts`). Ya resuelto y probado: cliente HTTP con clasificación de errores, OAuth2 `client_credentials` con caché de token y validación del mapeo a `RateQuote` (solo USD, montos y fechas válidos, total coherente).
 
 ## ⚙️ Variables de entorno
 
@@ -218,9 +249,9 @@ npm run lint && npm run typecheck && npm test && npm run build
 
 | Suite | Pruebas |
 |---|---|
-| Backend, unitarias | 72 |
-| Backend, integración (supertest + PostgreSQL) | 11 |
-| Frontend (Vitest + Testing Library) | 9 |
+| Backend, unitarias | 107 |
+| Backend, integración (supertest + PostgreSQL) | 16 |
+| Frontend (Vitest + Testing Library) | 22 |
 
 Verificado en local con lint, tipos y build sin errores. El workflow de [GitHub Actions](.github/workflows/ci.yml) ejecuta los mismos comandos (incluye `prisma migrate deploy`); su sintaxis es válida, pero **aún no se ha ejecutado**.
 
@@ -262,7 +293,8 @@ strategyko-rates/
 
 | Pendiente | Estado |
 |---|---|
-| Adaptadores live de Maersk, CMA CGM y Hapag-Lloyd | **Sin contrato verificado.** Faltan credenciales y la documentación de los portales no fue accesible sin sesión. Solo está la infraestructura. |
+| Adaptadores live de tarifas, salidas y seguimiento | **Sin contrato verificado** en Maersk, CMA CGM y Hapag-Lloyd. Faltan credenciales y la documentación de los portales no fue accesible sin sesión. Para tarifas está la infraestructura completa; salidas y seguimiento solo fallan con un error claro. |
+| Seguimiento y salidas | Simulados y **no se guardan** en la base de datos. El seguimiento exige elegir la naviera: no se deduce del número de contenedor. |
 | Contrato real con Strategyko | **Propuesta propia**, sin validar con su backend. |
 | CI en GitHub Actions | Escrito y con sintaxis válida, **aún sin ejecutar**. |
 | Autenticación y tenant real | Tenant fijo por variable de entorno. |

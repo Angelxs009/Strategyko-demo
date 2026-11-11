@@ -97,9 +97,10 @@ describe("RatesDashboard", () => {
     mockApi();
     render(<RatesDashboard />);
     expect(screen.getByRole("heading", { name: "Comparativo de tarifas" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Puerto de origen (China)")).toBeInTheDocument();
-    expect(screen.getByLabelText("Destino (UN/LOCODE)")).toHaveValue("ECGYE");
-    expect(screen.getByLabelText("Contenedor")).toHaveValue("40HC");
+    const panel = within(screen.getByRole("tabpanel"));
+    expect(panel.getByLabelText("Puerto de origen (China)")).toBeInTheDocument();
+    expect(panel.getByLabelText("Destino (UN/LOCODE)")).toHaveValue("ECGYE");
+    expect(panel.getByLabelText("Contenedor")).toHaveValue("40HC");
     expect(screen.getByText("Aún no hay una comparación")).toBeInTheDocument();
   });
 
@@ -190,8 +191,9 @@ describe("RatesDashboard", () => {
     const fetchMock = mockApi();
     const user = userEvent.setup();
     render(<RatesDashboard />);
-    await user.selectOptions(screen.getByLabelText("Puerto de origen (China)"), "Otro puerto (UN/LOCODE)…");
-    await user.type(screen.getByLabelText("Código UN/LOCODE del puerto de origen"), "USLAX");
+    const panel = within(screen.getByRole("tabpanel"));
+    await user.selectOptions(panel.getByLabelText("Puerto de origen (China)"), "Otro puerto (UN/LOCODE)…");
+    await user.type(panel.getByLabelText("Código UN/LOCODE del puerto de origen"), "USLAX");
     await user.click(screen.getByRole("button", { name: "Consultar y comparar" }));
     expect(await screen.findByText(/puerto de China en formato UN\/LOCODE/)).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes("/api/compare"))).toBe(false);

@@ -1,4 +1,13 @@
-import type { CarrierError, CompareResponse, HistoryResponse, PushResponse, RateQuery } from "./types";
+import type {
+  Carrier,
+  CarrierError,
+  CompareResponse,
+  HistoryResponse,
+  PushResponse,
+  RateQuery,
+  SchedulesResponse,
+  TrackingResponse,
+} from "./types";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
 export const REQUEST_TIMEOUT_MS = 8000;
@@ -67,6 +76,12 @@ export const fetchCompare = (q: RateQuery) => request<CompareResponse>(`/api/com
 
 export const pushToStrategyko = (q: RateQuery) =>
   request<PushResponse>("/api/push", { method: "POST", body: JSON.stringify(q) });
+
+export const fetchSchedules = (q: { origin: string; destination: string }, weeks: number) =>
+  request<SchedulesResponse>(`/api/schedules?${toQueryString({ ...q, weeks })}`);
+
+export const fetchTracking = (reference: string, carrier: Carrier) =>
+  request<TrackingResponse>(`/api/tracking/${encodeURIComponent(reference.trim())}?${toQueryString({ carrier })}`);
 
 export const fetchHistory = (page: number, pageSize = 10) =>
   request<HistoryResponse>(`/api/rates/history?${toQueryString({ page, pageSize })}`);

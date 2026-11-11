@@ -108,3 +108,60 @@ export interface HistoryResponse {
   total: number;
   items: HistoryItem[];
 }
+
+// ---- Próximas salidas ----
+
+export interface Departure {
+  carrier: Carrier;
+  origin: string;
+  destination: string;
+  vessel: string;
+  voyage: string;
+  service: string;
+  etd: string;
+  eta: string;
+  transitDays: number;
+  source: DataSource;
+}
+
+export interface SchedulesResponse {
+  query: { origin: string; destination: string; weeks: number };
+  n: number;
+  mode: DataMode;
+  warning: string | null;
+  departures: Departure[];
+  errors: CarrierError[];
+}
+
+// ---- Seguimiento ----
+
+export type TrackingStatus = "PENDING" | "IN_TRANSIT" | "ARRIVED";
+
+export interface TrackingEvent {
+  code: string;
+  description: string;
+  location: string;
+  locationName: string;
+  date: string;
+  completed: boolean;
+}
+
+export interface TrackingResult {
+  carrier: Carrier;
+  reference: string;
+  referenceType: "container" | "bl";
+  status: TrackingStatus;
+  vessel: string;
+  voyage: string;
+  origin: string;
+  destination: string;
+  eta: string;
+  events: TrackingEvent[];
+  source: DataSource;
+}
+
+export interface TrackingResponse {
+  mode: DataMode;
+  warning: string | null;
+  tracking: TrackingResult;
+}

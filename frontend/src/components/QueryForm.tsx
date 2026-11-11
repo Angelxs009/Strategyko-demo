@@ -1,16 +1,43 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
-import { COMMON_ORIGINS, CONTAINER_OPTIONS, OTHER_ORIGIN, UNLOCODE } from "@/lib/format";
-import type { ContainerType, RateQuery } from "@/lib/types";
+import { COMMON_ORIGINS, CONTAINER_OPTIONS, OTHER_ORIGIN, UNLOCODE, WEEK_OPTIONS } from "@/lib/format";
+import type { ContainerType } from "@/lib/types";
 import { SearchIcon } from "./Icons";
 
-export function QueryForm({ onSubmit, loading }: { onSubmit: (q: RateQuery) => void; loading: boolean }) {
+export interface RouteFormValues {
+  origin: string;
+  destination: string;
+  container: ContainerType;
+  weeks: number;
+}
+
+type Variant = "pricing" | "schedules";
+
+const SUBMIT_LABELS: Record<Variant, { idle: string; busy: string }> = {
+  pricing: { idle: "Consultar y comparar", busy: "Consultando…" },
+  schedules: { idle: "Buscar salidas", busy: "Buscando…" },
+};
+
+/**
+ * Formulario de ruta compartido. En "pricing" pide el contenedor; en "schedules" pide
+ * cuántas semanas hacia adelante mostrar.
+ */
+export function QueryForm({
+  onSubmit,
+  loading,
+  variant = "pricing",
+}: {
+  onSubmit: (v: RouteFormValues) => void;
+  loading: boolean;
+  variant?: Variant;
+}) {
   const uid = useId();
   const [originChoice, setOriginChoice] = useState("CNSHA");
   const [customOrigin, setCustomOrigin] = useState("");
   const [destination, setDestination] = useState("ECGYE");
   const [container, setContainer] = useState<ContainerType>("40HC");
+  const [weeks, setWeeks] = useState(4);
   const [errors, setErrors] = useState<{ origin?: string; destination?: string }>({});
 
   const handleSubmit = (e: FormEvent) => {
@@ -23,11 +50,13 @@ export function QueryForm({ onSubmit, loading }: { onSubmit: (q: RateQuery) => v
     }
     if (!UNLOCODE.test(dest)) next.destination = "Ingresa un destino en formato UN/LOCODE, por ejemplo ECGYE.";
     setErrors(next);
-    if (Object.keys(next).length === 0) onSubmit({ origin, destination: dest, container });
+    if (Object.keys(next).length === 0) onSubmit({ origin, destination: dest, container, weeks });
   };
 
+  const label = SUBMIT_LABELS[variant];
+
   return (
-    <form className="card" onSubmit={handleSubmit} noValidate aria-label="Consulta de tarifas">
+    <form className="card" onSubmit={handleSubmit} noValidate aria-label={variant === "pricing" ? "Consulta de tarifas" : "Búsqueda de salidas"}>
       <div className="form-grid">
         <div className="field">
           <label htmlFor={`${uid}-origin`}>Puerto de origen (China)</label>
@@ -90,26 +119,39 @@ export function QueryForm({ onSubmit, loading }: { onSubmit: (q: RateQuery) => v
           )}
         </div>
 
-        <div className="field">
-          <label htmlFor={`${uid}-cont`}>Contenedor</label>
-          <select
-            id={`${uid}-cont`}
-            className="select"
-            value={container}
-            onChange={(e) => setContainer(e.target.value as ContainerType)}
-          >
-            {CONTAINER_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {variant === "pricing" ? (
+          <div className="field">
+            <label htmlFor={`${uid}-cont`}>Contenedor</label>
+            <select
+              id={`${uid}-cont`}
+              className="select"
+              value={container}
+              onChange={(e) => setContainer(e.target.value as ContainerType)}
+            >
+              {CONTAINER_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="field">
+            <label htmlFor={`${uid}-weeks`}>Semanas a mostrar</label>
+            <select id={`${uid}-weeks`} className="select" value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+              {WEEK_OPTIONS.map((w) => (
+                <option key={w} value={w}>
+                  Próximas {w} semanas
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-actions">
           <button type="submit" className="btn btn--primary" disabled={loading}>
             {loading ? <span className="spinner" aria-hidden="true" /> : <SearchIcon />}
-            {loading ? "Consultando…" : "Consultar y comparar"}
+            {loading ? label.busy : label.idle}
           </button>
         </div>
       </div>

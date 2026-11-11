@@ -32,7 +32,7 @@ export class TrackingService {
         baseDelayMs: this.retryBaseDelayMs,
       });
       const mode = resolveMode([tracking.source]);
-      return { mode, warning: demoWarning(mode, 'Seguimiento y eventos'), tracking };
+      return { mode, warning: demoWarning(mode, 'Seguimiento y eventos simulados'), tracking };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       throw new BadGatewayException({

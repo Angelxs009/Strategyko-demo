@@ -120,9 +120,9 @@ describe('API (integración)', () => {
     const res = await request(app.getHttpServer()).get('/api/schedules?origin=CNSHA&weeks=2').expect(200);
     expect(res.body.n).toBe(6);
     expect(res.body.mode).toBe('demo');
-    expect(res.body.warning).toContain('simulados');
+    expect(res.body.warning).toContain('Salidas simuladas');
     const etds = res.body.departures.map((d: { etd: string }) => d.etd);
-    expect(etds).toEqual([...etds].sort());
+    expect(etds).toEqual([...etds].sort((a: string, b: string) => a.localeCompare(b)));
     for (const d of res.body.departures) {
       expect(d.source).toBe('demo');
       expect(d.vessel).toMatch(/^DEMO /);

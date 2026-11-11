@@ -141,6 +141,187 @@
       ]
     },
     {
+      "name": "Próximas salidas",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/schedules?origin=CNSHA&destination=ECGYE&weeks=4",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "schedules"
+          ],
+          "query": [
+            {
+              "key": "origin",
+              "value": "CNSHA"
+            },
+            {
+              "key": "destination",
+              "value": "ECGYE"
+            },
+            {
+              "key": "weeks",
+              "value": "4"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const b = pm.response.json();",
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('3 navieras x 4 semanas = 12 salidas', () => pm.expect(b.n).to.eql(12));",
+              "pm.test('ordenadas por fecha', () => { const e = b.departures.map(d => d.etd); pm.expect(e).to.eql([...e].sort()); });",
+              "pm.test('datos marcados', () => b.departures.forEach(d => pm.expect(['demo','live']).to.include(d.source)));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error 400: weeks fuera de rango",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/schedules?origin=CNSHA&weeks=20",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "schedules"
+          ],
+          "query": [
+            {
+              "key": "origin",
+              "value": "CNSHA"
+            },
+            {
+              "key": "weeks",
+              "value": "20"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seguimiento de un contenedor",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/tracking/CSQU3054383?carrier=MAERSK",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tracking",
+            "CSQU3054383"
+          ],
+          "query": [
+            {
+              "key": "carrier",
+              "value": "MAERSK"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const b = pm.response.json();",
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('línea de tiempo con 6 eventos', () => pm.expect(b.tracking.events.length).to.eql(6));",
+              "pm.test('en demo hay aviso', () => { if (b.mode !== 'live') pm.expect(b.warning).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error 400: contenedor con dígito verificador inválido",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "disabled": true
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/tracking/CSQU3054384?carrier=MAERSK",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tracking",
+            "CSQU3054384"
+          ],
+          "query": [
+            {
+              "key": "carrier",
+              "value": "MAERSK"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 con motivo', () => { pm.response.to.have.status(400); pm.expect(JSON.stringify(pm.response.json().message)).to.include('dígito verificador'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Historial",
       "request": {
         "method": "GET",
@@ -222,7 +403,9 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('202', () => pm.response.to.have.status(202));",
-              "pm.test('payload versionado', () => pm.expect(pm.response.json().payload.schemaVersion).to.eql('1.0'));"
+              "const b = pm.response.json();",
+              "pm.test('payload versionado 1.1', () => pm.expect(b.payload.schemaVersion).to.eql('1.1'));",
+              "pm.test('incluye salidas', () => pm.expect(b.payload.schedules.length).to.be.above(0));"
             ]
           }
         }

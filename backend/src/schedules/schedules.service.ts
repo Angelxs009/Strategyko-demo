@@ -31,6 +31,6 @@ export class SchedulesService {
     );
     const departures = values.flat().sort((a, b) => a.etd.localeCompare(b.etd) || a.carrier.localeCompare(b.carrier));
     const mode = resolveMode(departures.map((d) => d.source));
-    return { query, n: departures.length, mode, warning: demoWarning(mode, 'Salidas'), departures, errors };
+    return { query, n: departures.length, mode, warning: demoWarning(mode, 'Salidas simuladas'), departures, errors };
   }
 }
