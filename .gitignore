@@ -9,3 +9,6 @@ coverage/
 *.tsbuildinfo
 backend/src/generated/
 .playwright-mcp/
+
+# Archivos de guía de agentes generados por los scaffolds
+AGENTS.md
