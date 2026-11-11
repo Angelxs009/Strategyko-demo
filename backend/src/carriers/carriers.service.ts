@@ -1,32 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Carrier, RateQuery, RateQuote } from '../common/types.js';
-import { CarrierNotConfiguredError, type CarrierAdapter } from './carrier.adapter.js';
+import type { Carrier } from '../common/types.js';
+import type { CarrierAdapter } from './carrier.adapter.js';
 import { DemoCarrierAdapter } from './demo.adapter.js';
+import { CmaCgmLiveAdapter } from './live/cmacgm.adapter.js';
+import { HapagLiveAdapter } from './live/hapag.adapter.js';
+import { MaerskLiveAdapter } from './live/maersk.adapter.js';
 
 /** Navieras activas en esta entrega (MSC queda fuera por ahora). */
 export const ACTIVE_CARRIERS: Carrier[] = ['MAERSK', 'CMA_CGM', 'HAPAG_LLOYD'];
 
-/** Adaptador live aún sin implementar: falla con un error claro, nunca cae a demo. */
-class NotConfiguredAdapter implements CarrierAdapter {
-  constructor(readonly carrier: Carrier) {}
-
-  async getRate(_query: RateQuery, _now?: Date): Promise<RateQuote> {
-    throw new CarrierNotConfiguredError(
-      `El adaptador live de ${this.carrier} no está configurado (faltan credenciales o endpoint verificado).`,
-    );
-  }
-}
-
 @Injectable()
 export class CarriersService {
+  private cached: { mode: 'demo' | 'live'; adapters: CarrierAdapter[] } | null = null;
+
   constructor(private readonly config: ConfigService) {}
 
   get mode(): 'demo' | 'live' {
     return this.config.get<string>('RATES_MODE') === 'live' ? 'live' : 'demo';
   }
 
+  /** Los adaptadores se crean una vez por modo para conservar el caché de tokens OAuth2. */
   adapters(): CarrierAdapter[] {
-    return ACTIVE_CARRIERS.map((c) => (this.mode === 'live' ? new NotConfiguredAdapter(c) : new DemoCarrierAdapter(c)));
+    const mode = this.mode;
+    if (this.cached?.mode !== mode) {
+      const adapters: CarrierAdapter[] =
+        mode === 'live'
+          ? [new MaerskLiveAdapter(this.config), new CmaCgmLiveAdapter(this.config), new HapagLiveAdapter(this.config)]
+          : ACTIVE_CARRIERS.map((c) => new DemoCarrierAdapter(c));
+      this.cached = { mode, adapters };
+    }
+    return this.cached.adapters;
   }
 }
