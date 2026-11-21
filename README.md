@@ -253,7 +253,7 @@ npm run lint && npm run typecheck && npm test && npm run build
 | Backend, integración (supertest + PostgreSQL) | 35 |
 | Frontend (Vitest + Testing Library) | 22 |
 
-Verificado en local con lint, tipos y build sin errores. El workflow de [GitHub Actions](.github/workflows/ci.yml) ejecuta los mismos comandos (incluye `prisma migrate deploy`); su sintaxis es válida, pero **aún no se ha ejecutado**.
+Verificado en local y en GitHub: el workflow de [GitHub Actions](.github/workflows/ci.yml) ejecuta lint, tipos, pruebas, migraciones (`prisma migrate deploy`) y compilación, y **pasa en verde** en la rama `main` (backend y frontend).
 
 **Contrato de la API.** `backend/test/openapi-contract.e2e-spec.ts` comprueba que Swagger diga la verdad:
 
@@ -271,6 +271,23 @@ DATABASE_URL=postgresql://strategyko:strategyko@localhost:55434/strategyko_rates
 ```
 
 </details>
+
+## ☁️ Despliegue en Railway
+
+La demo está desplegada en [Railway](https://railway.com), en un proyecto con **3 servicios**: PostgreSQL, backend y frontend.
+
+| Servicio | Dirección |
+|---|---|
+| Frontend | https://frontend-production-81284590.up.railway.app |
+| Swagger (backend) | https://backend-production-ec6cb526.up.railway.app/api/docs |
+
+> [!NOTE]
+> Es una demo con **datos simulados** y sin autenticación: cualquiera con el enlace puede usar la API.
+
+- Cada servicio se construye con su `Dockerfile` ([backend](backend/Dockerfile) y [frontend](frontend/Dockerfile)).
+- El backend aplica las migraciones al arrancar (`prisma migrate deploy`) y toma `DATABASE_URL` del servicio de PostgreSQL.
+- Variables del backend: `DATABASE_URL`, `RATES_MODE=demo` y `CORS_ORIGINS` (la dirección del frontend).
+- Variable del frontend: `NEXT_PUBLIC_API_URL` (la dirección del backend); se incrusta al compilar, por eso se despliega después del backend.
 
 ## 🧠 Decisiones de diseño
 
@@ -303,13 +320,13 @@ strategyko-rates/
 | Adaptadores live de tarifas, salidas y seguimiento | **Sin contrato verificado** en Maersk, CMA CGM y Hapag-Lloyd. Faltan credenciales y la documentación de los portales no fue accesible sin sesión. Para tarifas está la infraestructura completa; salidas y seguimiento solo fallan con un error claro. |
 | Seguimiento y salidas | Simulados y **no se guardan** en la base de datos. El seguimiento exige elegir la naviera: no se deduce del número de contenedor. |
 | Contrato real con Strategyko | **Propuesta propia**, sin validar con su backend. |
-| CI en GitHub Actions | Escrito y con sintaxis válida, **aún sin ejecutar**. |
+| CI en GitHub Actions | ✅ En verde en `main` (backend y frontend). |
 | Autenticación y tenant real | Tenant fijo por variable de entorno. |
 | MSC | Fuera de esta entrega: el tipo existe, falta el adaptador. |
 | Puerto `CNQIN` | No se pudo verificar como UN/LOCODE; no está en el selector, pero se puede escribir en "otro puerto". |
 | Insights del backend | Usan punto decimal (`USD 4077.77`), mientras la interfaz usa formato `es-EC`. |
 | Auditoría de dependencias | `npm audit` reportó avisos en ambos proyectos; no se revisaron. |
-| Despliegue y staging | No configurados. Recomendación: Railway con servicios separados, primero el backend con `npm run db:deploy`, y siempre pasar por staging antes de producción. |
+| Staging | No configurado: hay un único ambiente en Railway. Lo recomendable es agregar un ambiente de staging y probar siempre ahí antes de producción. |
 
 ---
 
