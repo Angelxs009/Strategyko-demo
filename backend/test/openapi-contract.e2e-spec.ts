@@ -167,6 +167,11 @@ describe('OpenAPI: el contrato publicado', () => {
       expect((doc.tags ?? []).map((t) => t.name).sort()).toEqual(['compare', 'health', 'rates', 'schedules', 'strategyko', 'tracking']);
     });
 
+    it('no fija un servidor localhost: Swagger usa la dirección desde la que se abre (local o desplegado)', () => {
+      const servers = (doc as unknown as { servers?: unknown }).servers ?? [];
+      expect(JSON.stringify(servers)).not.toContain('localhost');
+    });
+
     it('cada operación tiene resumen, descripción, tag y una respuesta de éxito con esquema', () => {
       for (const { path, method, op } of operations()) {
         const label = `${method.toUpperCase()} ${path}`;

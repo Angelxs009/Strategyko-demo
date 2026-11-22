@@ -37,7 +37,7 @@ export function setupSwagger(app: INestApplication): void {
     .setTitle('Strategyko Rates API')
     .setDescription(DESCRIPTION)
     .setVersion('1.1')
-    .addServer(`http://localhost:${process.env.PORT ?? 4000}`, 'Local')
+    // Sin addServer: Swagger usa la dirección desde la que se abre (local o Railway).
     .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header', description: 'Solo si el servicio define `SERVICE_API_KEY`' }, 'api-key')
     .addTag('rates', 'Tarifas de las navieras, normalizadas, y su historial')
     .addTag('compare', 'Análisis comparativo de tarifas: ranking, equilibrio, dispersión, desglose e insights')
